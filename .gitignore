@@ -40,3 +40,23 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+/tests/results
+/tests/unit
+
+# Private runtime credentials and one-image integration state
+.env
+.env.*
+*.secret
+*.sqlite
+*.sqlite-*
+/.private
+
+# Local tooling and test artifacts
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+playwright-report/
+test-results/
+*.pem
+*service-account*.json

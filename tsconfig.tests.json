@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "Node16",
+    "moduleResolution": "node16",
+    "outDir": "tests/unit",
+    "rootDir": "src/app",
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["src/app/state.ts", "src/app/catalog.ts"]
+}

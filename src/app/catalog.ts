@@ -1,0 +1,99 @@
+export type Lang = 'ar' | 'en';
+export interface Post {
+  id: string;
+  image: string;
+  category: string;
+  ar: string;
+  en: string;
+  textAr: string;
+  textEn: string;
+  tagAr: string[];
+  tagEn: string[];
+  author: string;
+}
+export const catalog: Post[] = [
+  {
+    id: 'space',
+    image: 'ribbon',
+    category: 'design',
+    ar: 'المساحة اللي حوالين الفكرة',
+    en: 'The space around an idea',
+    textAr:
+      'أحيانًا التصميم الأحسن بيبدأ بالحذف. لما نقلل العناصر اللي بتتنافس على الانتباه، الفكرة الأساسية بتبان. الشريط المعدني هنا دراسة بصرية في الفراغ والضوء، مش صورة منتج للبيع. جرّب تبص على الفراغ اللي جواه قبل سطحه اللامع.',
+    textEn:
+      'Sometimes better design begins with subtraction. When fewer elements compete for attention, the central idea becomes clearer. This metallic ribbon is a visual study of space and light, not a product for sale. Notice the empty space before the polished surface.',
+    tagAr: ['تصميم', 'بساطة', 'ضوء'],
+    tagEn: ['design', 'simplicity', 'light'],
+    author: 'Cofeed Studio',
+  },
+  {
+    id: 'perspective',
+    image: 'arch',
+    category: 'architecture',
+    ar: 'مكان صغير، منظور جديد',
+    en: 'A smaller place. A wider perspective.',
+    textAr:
+      'لون واحد، باب مفتوح، وسلم بيكمّل الحكاية. دراسة معمارية خيالية عن إزاي الضوء يغيّر إحساسنا بالمكان. مش لازم نزود مساحة علشان نشوف إمكانيات أكتر؛ أحيانًا محتاجين نغيّر الزاوية.',
+    textEn:
+      'One colour, an open doorway, and a stair that continues the story. An imagined architectural study of how light changes a place. More possibilities do not always require more space. Sometimes they need a different angle.',
+    tagAr: ['عمارة', 'لون', 'منظور'],
+    tagEn: ['architecture', 'colour', 'perspective'],
+    author: 'Cofeed Studio',
+  },
+  {
+    id: 'slow',
+    image: 'linen',
+    category: 'design',
+    ar: 'إيقاع أبطأ للتفاصيل',
+    en: 'A slower rhythm for the details',
+    textAr:
+      'الكتان والخزف والظل بيقترحوا لغة بسيطة. ملمس واضح ومساحة مريحة بيخلّوا العين تستريح. دي لوحة توضيحية مولدة لدراسة التوازن، مش توصية بشراء قطعة بعينها.',
+    textEn:
+      'Linen, ceramic and shadow suggest a quiet visual language. Clear texture and breathing room let the eye rest. This generated still life studies balance. It is not a recommendation to buy a particular object.',
+    tagAr: ['خامات', 'توازن', 'تصميم'],
+    tagEn: ['materials', 'balance', 'design'],
+    author: 'Cofeed Studio',
+  },
+  {
+    id: 'morning',
+    image: 'breakfast',
+    category: 'stories',
+    ar: 'صباح من غير استعجال',
+    en: 'A morning without hurry',
+    textAr:
+      'دفتر مفتوح جنب الشباك وكوباية دافية. حكاية قصيرة متخيلة عن عادة يومية: تكتب ملاحظة قبل ما تفتح الشاشة. مش كل فكرة محتاجة تتنشر فورًا؛ بعضها محتاج وقت علشان يبقى أوضح.',
+    textEn:
+      'An open notebook by the window and a warm cup. An imagined small story about a daily habit: write one note before opening a screen. Not every idea needs to be shared immediately. Some need time to become clear.',
+    tagAr: ['حكايات', 'يومي', 'كتابة'],
+    tagEn: ['stories', 'everyday', 'writing'],
+    author: 'Cofeed Studio',
+  },
+  {
+    id: 'lane',
+    image: 'lane',
+    category: 'stories',
+    ar: 'المرّة اللي غيّرنا فيها الطريق',
+    en: 'The day we took another way',
+    textAr:
+      'طريق جانبي في آخر النهار فتح مشهد مختلف. المكان هنا مرسوم وخيالي، والحكاية بتسأل سؤال بسيط: إيه التفاصيل اللي بنفوتها وإحنا بنكرر نفس الطريق كل يوم؟',
+    textEn:
+      'A side street at the end of the day opened a different view. This place is illustrated and fictional. The story asks a simple question: what details do we miss when we repeat the same route each day?',
+    tagAr: ['حكايات', 'مدينة', 'اكتشاف'],
+    tagEn: ['stories', 'city', 'discovery'],
+    author: 'Cofeed Studio',
+  },
+  {
+    id: 'coast',
+    image: 'drama',
+    category: 'architecture',
+    ar: 'بيت عند حافة الهدوء',
+    en: 'A house at the edge of quiet',
+    textAr:
+      'دراسة خيالية لبيت على ساحل صخري. العلاقة بين المبنى والطبيعة هي الموضوع، مش موقع عقاري حقيقي. الخطوط البسيطة والإضاءة الدافية بتوازن ثقل الصخور واتساع البحر.',
+    textEn:
+      'An imagined study of a house on a rocky coast. The subject is the relationship between a building and its landscape, not a real property listing. Simple lines and warm light balance the weight of the rocks and the open sea.',
+    tagAr: ['عمارة', 'طبيعة', 'ضوء'],
+    tagEn: ['architecture', 'landscape', 'light'],
+    author: 'Cofeed Studio',
+  },
+];

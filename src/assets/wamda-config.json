@@ -1,0 +1,10 @@
+{
+  "mode": "live",
+  "firebase": {
+    "projectId": "wamda-portfolio-2026",
+    "appId": "1:934065965969:web:7c9301bd488c4fbd62a830",
+    "apiKey": "AIzaSyDbBv8u1eIUKIc8D9fa-x9x9y7tCC3K8IY",
+    "authDomain": "wamda-portfolio-2026.firebaseapp.com",
+    "messagingSenderId": "934065965969"
+  }
+}
