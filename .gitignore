@@ -40,3 +40,13 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+/tests/results
+/tests/unit
+
+# Private runtime credentials and one-image integration state
+.env
+.env.*
+*.secret
+*.sqlite
+*.sqlite-*
+/.private

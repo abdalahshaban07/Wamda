@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signed(){ return request.auth != null; }
+  function owner(uid){ return signed() && request.auth.uid == uid; }
+  function mod(){ return signed() && request.auth.token.get('moderator', false) == true; }
+  function publicPost(pid){ return get(/databases/$(database)/documents/posts/$(pid)).data.status == 'published'; }
+  function text(v,min,max){ return v is string && v.size() >= min && v.size() <= max; }
+  function bounded(kind,id){let p=/databases/$(database)/documents/users/$(request.auth.uid)/limits/$(kind);return getAfter(p).data.target==id && getAfter(p).data.lastAt==request.time && (!exists(p) || getAfter(p).data.count==get(p).data.count+1);}
+  match /users/{uid}/limits/{kind} {
+   allow read: if owner(uid);
+   allow create,update: if owner(uid) && kind in ['posts','comments','reports'] && request.resource.data.keys().hasOnly(['count','lastAt','target']) && request.resource.data.lastAt==request.time && text(request.resource.data.target,1,150) && request.resource.data.count is int && ((!exists(/databases/$(database)/documents/users/$(uid)/limits/$(kind)) && request.resource.data.count==1) || (request.resource.data.count==resource.data.count+1 && request.time>=resource.data.lastAt+duration.value(1,'s')));
+   allow delete: if false;
+  }
+  match /uploads/{id} { allow read: if signed() && resource.data.ownerId == request.auth.uid; allow create, delete: if false; allow update: if signed() && resource.data.ownerId == request.auth.uid && resource.data.postId == '' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['postId']) && text(request.resource.data.postId,1,150) && getAfter(/databases/$(database)/documents/posts/$(request.resource.data.postId)).data.authorId == request.auth.uid && getAfter(/databases/$(database)/documents/posts/$(request.resource.data.postId)).data.mediaId == id; }
+  match /profiles/{uid} {
+   allow read: if true;
+   allow create, update: if owner(uid) && request.resource.data.keys().hasOnly(['name','bio']) && text(request.resource.data.name,1,60) && text(request.resource.data.bio,0,280);
+   allow delete: if owner(uid);
+  }
+  match /posts/{pid} {
+   allow read: if resource.data.status == 'published' || owner(resource.data.authorId) || mod();
+   allow create: if signed() && bounded('posts',pid) && request.resource.data.keys().hasOnly(['authorId','title','body','category','link','image','mediaId','status','createdAt'])
+    && request.resource.data.authorId == request.auth.uid
+    && text(request.resource.data.title,1,120) && text(request.resource.data.body,1,5000)
+    && request.resource.data.category in ['design','architecture','stories']
+    && text(request.resource.data.link,0,1000) && (request.resource.data.link == '' || request.resource.data.link.matches('https://.*'))
+    && ((request.resource.data.image == '' && request.resource.data.mediaId == '') || (text(request.resource.data.mediaId,1,100) && get(/databases/$(database)/documents/uploads/$(request.resource.data.mediaId)).data.ownerId == request.auth.uid && get(/databases/$(database)/documents/uploads/$(request.resource.data.mediaId)).data.url == request.resource.data.image && getAfter(/databases/$(database)/documents/uploads/$(request.resource.data.mediaId)).data.postId == pid)) && request.resource.data.status == 'published' && request.resource.data.createdAt == request.time;
+   allow update: if (owner(resource.data.authorId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'deleted')
+      || (mod() && resource.data.status != 'deleted' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status in ['published','hidden','deleted']);
+   // Tombstones preserve ownership for safe media cleanup. Hard deletion requires a trusted maintenance path.
+   allow delete: if false;
+   match /likes/{uid} {
+    allow read: if publicPost(pid);
+    allow create: if owner(uid) && publicPost(pid) && request.resource.data.keys().hasOnly(['createdAt']) && request.resource.data.createdAt == request.time;
+    allow delete: if owner(uid);
+    allow update: if false;
+   }
+   match /comments/{cid} {
+    allow read: if publicPost(pid) && resource.data.status == 'visible' || mod();
+    allow create: if signed() && bounded('comments',cid) && publicPost(pid) && request.resource.data.keys().hasOnly(['authorId','body','createdAt','status']) && request.resource.data.authorId == request.auth.uid && text(request.resource.data.body,1,1000) && request.resource.data.createdAt == request.time && request.resource.data.status == 'visible';
+    allow update: if (owner(resource.data.authorId) || mod()) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'deleted';
+    allow delete: if false;
+   }
+  }
+  match /users/{uid}/mediaCleanup/{id} {
+   allow read, delete: if owner(uid);
+   allow create: if owner(uid) && request.resource.data.keys().hasOnly(['postId','createdAt']) && text(request.resource.data.postId,1,150) && request.resource.data.createdAt == request.time && getAfter(/databases/$(database)/documents/posts/$(request.resource.data.postId)).data.authorId == uid && getAfter(/databases/$(database)/documents/posts/$(request.resource.data.postId)).data.mediaId == id && getAfter(/databases/$(database)/documents/posts/$(request.resource.data.postId)).data.status == 'deleted';
+   allow update: if false;
+  }
+  match /users/{uid}/collections/{id} {
+   allow read, delete: if owner(uid);
+   allow create, update: if owner(uid) && request.resource.data.keys().hasOnly(['name']) && text(request.resource.data.name,1,40);
+  }
+  match /users/{uid}/saved/{pid} {
+   allow read, delete: if owner(uid);
+   allow create, update: if owner(uid) && request.resource.data.keys().hasOnly(['collectionId']) && text(request.resource.data.collectionId,1,100);
+  }
+  match /reports/{rid} {
+   allow create: if signed() && bounded('reports',rid) && rid == request.auth.uid+'_'+request.resource.data.postId && request.resource.data.keys().hasOnly(['reporterId','postId','reason','createdAt','status']) && request.resource.data.reporterId == request.auth.uid && text(request.resource.data.postId,1,150) && request.resource.data.reason in ['spam','abuse','rights','other'] && request.resource.data.createdAt == request.time && request.resource.data.status == 'open';
+   allow read: if mod();
+   allow update: if mod() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'closed';
+   allow delete: if false;
+  }
+ }
+}

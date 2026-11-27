@@ -1,0 +1,42 @@
+import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
+import {doc,setDoc,getDoc,updateDoc,collection,query,where,getDocs,serverTimestamp,deleteDoc,writeBatch} from 'firebase/firestore';
+import {readFileSync} from 'node:fs';
+const env=await initializeTestEnvironment({projectId:'demo-wamda',firestore:{rules:readFileSync('firestore.private.rules','utf8'),host:'127.0.0.1',port:8188}});
+const a=env.authenticatedContext('alice').firestore(),b=env.authenticatedContext('bob').firestore(),x=env.authenticatedContext('outsider').firestore(),g=env.unauthenticatedContext().firestore();let n=0;
+async function ok(name,p){await p;console.log('PASS',++n,name)}
+const post={authorId:'alice',title:'Test',body:'Protected portfolio test',category:'design',link:'',image:'',mediaId:'photo',status:'published',createdAt:serverTimestamp()};
+const image={ownerId:'alice',postId:'photo',dataUrl:'data:image/jpeg;base64,'+Buffer.from(readFileSync('tests/social/fixture.png')).toString('base64'),createdAt:serverTimestamp()};
+try{
+ await env.withSecurityRulesDisabled(async c=>{await setDoc(doc(c.firestore(),'members/alice'),{active:true});await setDoc(doc(c.firestore(),'members/bob'),{active:true});});
+ await ok('own membership readable before approval',assertSucceeds(getDoc(doc(x,'members/outsider'))));
+ await ok('cannot grant membership',assertFails(setDoc(doc(x,'members/outsider'),{active:true})));
+ await ok('cannot list members',assertFails(getDocs(collection(a,'members'))));
+ await ok('member profile create',assertSucceeds(setDoc(doc(a,'profiles/alice'),{name:'Alice',bio:''})));
+ await ok('guest profiles denied',assertFails(getDocs(collection(g,'profiles'))));
+ await ok('signed uninvited profiles denied',assertFails(getDocs(collection(x,'profiles'))));
+ let batch=writeBatch(a);batch.set(doc(a,'users/alice/limits/posts'),{count:1,lastAt:serverTimestamp(),target:'photo'});batch.set(doc(a,'posts/photo'),post);batch.set(doc(a,'images/photo'),image);await ok('atomic image and post publish',assertSucceeds(batch.commit()));
+ await ok('invited member feed',assertSucceeds(getDocs(query(collection(b,'posts'),where('status','==','published')))));
+ await ok('invited member image',assertSucceeds(getDoc(doc(b,'images/photo'))));
+ await ok('guest feed denied',assertFails(getDocs(query(collection(g,'posts'),where('status','==','published')))));
+ await ok('guest image denied',assertFails(getDoc(doc(g,'images/photo'))));
+ await ok('uninvited feed denied',assertFails(getDocs(query(collection(x,'posts'),where('status','==','published')))));
+ await ok('uninvited image denied',assertFails(getDoc(doc(x,'images/photo'))));
+ await ok('image replacement denied',assertFails(updateDoc(doc(a,'images/photo'),{dataUrl:image.dataUrl})));
+ await ok('unattached image denied',assertFails(setDoc(doc(a,'images/unattached'),{...image,postId:'unattached'})));
+ await ok('external image URL denied',assertFails(setDoc(doc(a,'images/remote'),{...image,postId:'remote',dataUrl:'https://example.com/image.jpg'})));
+ await ok('oversized image denied',assertFails(setDoc(doc(a,'images/huge'),{...image,postId:'huge',dataUrl:'data:image/jpeg;base64,'+'A'.repeat(210001)})));
+ await ok('another member cannot delete image',assertFails(deleteDoc(doc(b,'images/photo'))));
+ await ok('cannot remove image before post deletion',assertFails(deleteDoc(doc(a,'images/photo'))));
+ await ok('private collection',assertSucceeds(setDoc(doc(a,'users/alice/collections/c'),{name:'Mine'})));
+ await ok('private save',assertSucceeds(setDoc(doc(a,'users/alice/saved/photo'),{collectionId:'c'})));
+ await ok('other member cannot read saves',assertFails(getDocs(collection(b,'users/alice/saved'))));
+ await ok('member like',assertSucceeds(setDoc(doc(b,'posts/photo/likes/bob'),{createdAt:serverTimestamp()})));
+ await ok('guest likes denied',assertFails(getDocs(collection(g,'posts/photo/likes'))));
+ batch=writeBatch(b);batch.set(doc(b,'users/bob/limits/comments'),{count:1,lastAt:serverTimestamp(),target:'c'});batch.set(doc(b,'posts/photo/comments/c'),{authorId:'bob',body:'Useful',createdAt:serverTimestamp(),status:'visible'});await ok('member comment',assertSucceeds(batch.commit()));
+ await ok('guest comments denied',assertFails(getDocs(query(collection(g,'posts/photo/comments'),where('status','==','visible')))));
+ await ok('uninvited cannot comment',assertFails(setDoc(doc(x,'posts/photo/comments/hack'),{authorId:'outsider',body:'No',createdAt:serverTimestamp(),status:'visible'})));
+ await ok('other member cannot delete post',assertFails(updateDoc(doc(b,'posts/photo'),{status:'deleted'})));
+ batch=writeBatch(a);batch.update(doc(a,'posts/photo'),{status:'deleted'});batch.delete(doc(a,'images/photo'));await ok('owner deletes post and image atomically',assertSucceeds(batch.commit()));
+ await ok('deleted image gone for member',assertFails(getDoc(doc(b,'images/photo'))));
+ console.log('All',n,'protected rules tests passed');
+}finally{await env.cleanup()}
